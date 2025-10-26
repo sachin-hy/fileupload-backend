@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+
+
+metadata:
+  name: project-deployment
+  labels:
+    app: springboot-app
+
+spec:
+  replicas: 1
+  selector:
+      matchLabels:
+        app: springboot-app
+  template:
+      metadata:
+        labels:
+          app: springboot-app
+
+      spec:
+        containers:
+        - name: springboot-container
+          image: fileproject1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: "jdbc:mysql://mysql-service:3306/mydatabase?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+            - name: SPRING_DATASOURCE_USERNAME
+              value: "root"
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: "MyPass123"
+
+            - name: SPRING_MINIO_URL
+              value: "http://minio-service:9000"
+            - name: SPRING_MINIO_ACCESS_KEY
+              value: "admin"
+            - name: SPRING_MINIO_SECRET_KEY
+              value: "admin123"
+            - name: SPRING_MINIO_BUCKET_NAME
+              value: "uploads"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: project-service
+  labels:
+    app: springboot-app
+spec:
+  type: NodePort
+
+  selector:
+    app: springboot-app
+
+  ports:
+    - port: 8080
+      targetPort: 8081
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
