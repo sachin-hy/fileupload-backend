@@ -37,6 +37,8 @@ public class FileService {
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
 
+    @Value("${spring.frontendUrl")
+    private String frontendUrl;
 
     @Transactional
     public Map<String,Object> uploadId(String fileName,String fileSize,String fileType)
@@ -175,7 +177,7 @@ public class FileService {
 
 
 
-                      CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(completeRequest);
+                  CompleteMultipartUploadResult result = s3Client.completeMultipartUpload(completeRequest);
 
 
 
@@ -193,7 +195,7 @@ public class FileService {
 
                   //set file expireed time
 
-                  String downloadUrl = "http://localhost:3000/" + s3Key;
+                  String downloadUrl = frontendUrl + s3Key;
 
                   Map<String, Object> response = new HashMap<>();
                   response.put("s3Key", s3Key);
