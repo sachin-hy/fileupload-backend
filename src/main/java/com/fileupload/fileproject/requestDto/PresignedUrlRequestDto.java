@@ -12,5 +12,5 @@ public class PresignedUrlRequestDto {
 
    private String partNumber;
    private String uploadId;
-   private String objectName;
+   private String s3Key;
 }

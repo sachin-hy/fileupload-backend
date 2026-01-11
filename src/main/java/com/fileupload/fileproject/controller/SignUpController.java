@@ -28,6 +28,10 @@ public class SignUpController {
 
         try {
 
+            if(usersService.findByEmail(registerRequest.getEmail()).isPresent())
+            {
+                return new ResponseEntity<>("User Already Exists", HttpStatus.CONFLICT);
+            }
             Users user = usersService.saveUser(registerRequest);
             return new ResponseEntity<>(user, HttpStatus.CREATED);
         }catch(Exception ex)

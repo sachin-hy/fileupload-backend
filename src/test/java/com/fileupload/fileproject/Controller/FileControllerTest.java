@@ -85,12 +85,12 @@ public class FileControllerTest {
     public void testgetPresignedUrl_Success() throws Exception {
         String partNumber = "1";
         String uploadId = "testuploadid";
-        String objectName = "testobjectname";
+        String s3Key = "testobjectname";
 
         PresignedUrlRequestDto presignedUrlRequestDto = new PresignedUrlRequestDto();
         presignedUrlRequestDto.setPartNumber(partNumber);
         presignedUrlRequestDto.setUploadId(uploadId);
-        presignedUrlRequestDto.setObjectName(objectName);
+        presignedUrlRequestDto.setS3Key(s3Key);
 
 
         Map<String, Object> expectedResponse = new HashMap<>();

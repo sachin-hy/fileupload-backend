@@ -65,7 +65,7 @@ public class FileController {
 
         Map<String,Object> response = fileService.preSignedUrl(requestDto.getPartNumber(),
                                                                requestDto.getUploadId(),
-                                                               requestDto.getObjectName());
+                                                               requestDto.getS3Key());
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -76,6 +76,12 @@ public class FileController {
                                                      @RequestParam("s3Key") String s3Key,
                                                      @RequestParam("uploadId") String uploadId)
     {
+
+              log.info("completeMultipartUpload controller is called  " + etags.size());
+              log.info("s3Key: controller =  " + s3Key);
+              log.info("uploadId: controller =  " + uploadId);
+
+
               Map<String,Object> response = fileService.completeMultipartUpload(etags,s3Key,uploadId);
               return new ResponseEntity<>(response,HttpStatus.OK);
     }

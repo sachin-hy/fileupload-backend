@@ -1,6 +1,7 @@
 package com.fileupload.fileproject.service;
 
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
@@ -33,7 +34,7 @@ public class FileService {
     @Autowired
     private FilesRepository fileRepo;
 
-    @Value("${spring.minio.bucket-name}")
+    @Value("${aws.s3.bucket-name}")
     private String bucketName;
 
 
@@ -45,10 +46,29 @@ public class FileService {
             String uniqueId = UUID.randomUUID().toString();
             String objectName = uniqueId + "_" + fileName;
 
+            log.info("S3 Client Region: " + s3Client.getRegionName());
+            log.info("Attempting to connect to bucket: " + bucketName);
+            try {
+                // This will throw an exception if credentials/region are wrong
+                s3Client.headBucket(new HeadBucketRequest(bucketName));
+                log.info("S3 Connection Verified: Bucket exists and is accessible.");
+            } catch (AmazonServiceException e) {
+                log.error("S3 Connection Failed: {}", e.getErrorMessage());
+                if (e.getStatusCode() == 400) {
+                    log.error("Check your REGION. Current config is likely mismatched.");
+                }
+                throw new RuntimeException("Could not connect to S3: " + e.getErrorMessage());
+            }
+
+
+
+            log.info("objectName is created = " + objectName);
+
             InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(bucketName, objectName);
             InitiateMultipartUploadResult initResponse = s3Client.initiateMultipartUpload(initRequest);
             String uploadId = initResponse.getUploadId();
 
+            log.info("uploadId is created = " + uploadId);
             Files file = new Files();
             file.setFileId(objectName);
             file.setFileName(fileName);
@@ -75,6 +95,7 @@ public class FileService {
             response.put("chunkSize",chunkSize);
             response.put("totalChunk", partCount);
 
+            log.info("deftal of response after saving it in database = > " + response.toString());
             return response;
 
         }catch(Exception ex)
@@ -87,13 +108,18 @@ public class FileService {
 
 
     @Transactional                         // Srting partNumber, String uploadId
-    public Map<String, Object> preSignedUrl(String partNumber,String uploadId,String objectName)
+    public Map<String, Object> preSignedUrl(String partNumber,String uploadId,String s3Key)
     {
+            log.info("preSignedUrl uploadId = " + uploadId);
+            log.info("preSignedUrl partnumber = " + partNumber);
+            log.info("presigneUrl s3key = " + s3Key);
+
+
               try{
                   Date expiration = new Date(System.currentTimeMillis() + 1 * 60 * 60 * 1000); // 1 hour
 
 
-                      GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, objectName)
+                      GeneratePresignedUrlRequest request = new GeneratePresignedUrlRequest(bucketName, s3Key)
                               .withMethod(HttpMethod.PUT)
                               .withExpiration(expiration);
                       request.addRequestParameter("partNumber", partNumber);
@@ -101,6 +127,7 @@ public class FileService {
 
                       URL url = s3Client.generatePresignedUrl(request);
 
+                      log.info("preSigned Url recived = " + url);
                   Map<String, Object> response = new HashMap<>();
                   response.put("url", url.toString());
 //                  response.put("expiration", expiration);
@@ -130,6 +157,7 @@ public class FileService {
                       pTagList.add(new PartETag(partNumber, etag));
                   });
 
+                  log.info("CompleteMultipartUpload etags size = " + etags.size());
 
                   pTagList.sort(Comparator.comparingInt(PartETag::getPartNumber));
 
@@ -183,6 +211,9 @@ public class FileService {
           }
 
 
+
+
+
      @Transactional
      public Map<String,Object> downloadFile(String s3Key)
      {
@@ -215,6 +246,10 @@ public class FileService {
              response.put("s3Key", s3Key);
              response.put("expiresAt", expiration.toString());
              response.put("fileSize", file.getFileSize());
+             response.put("fileType", file.getFileType());
+             response.put("fileName", file.getFileName());
+
+
 
              file.setDownload_count(file.getDownload_count() + 1);
 
