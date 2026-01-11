@@ -37,7 +37,7 @@ public class FileService {
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
 
-    @Value("${spring.frontendUrl")
+    @Value("${spring.frontendUrl}")
     private String frontendUrl;
 
     @Transactional
