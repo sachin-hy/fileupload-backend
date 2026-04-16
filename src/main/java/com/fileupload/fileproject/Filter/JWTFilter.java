@@ -1,9 +1,12 @@
 package com.fileupload.fileproject.Filter;
 
 
+import com.fileupload.fileproject.context.TenantContext;
 import com.fileupload.fileproject.service.SecurityCustomService;
 
+import com.fileupload.fileproject.util.CustomUserDetails;
 import com.fileupload.fileproject.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.security.SignatureException;
@@ -60,13 +63,24 @@ public class JWTFilter extends OncePerRequestFilter {
 
             String token = null;
             String username = null;
+            Claims claims = null;
+
 
             if(authHeader != null && authHeader.startsWith("Bearer"))
             {
                 token = authHeader.substring(7);
-                username=jwtUtil.extractUsername(token);
 
-            }else
+                if(jwtUtil.isTokenExpired(token))
+                {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Invalid Token");
+                    return;
+                }
+
+                claims = jwtUtil.extractAllClaims(token);
+                username = claims.getSubject();
+              }
+            else
             {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.getWriter().write("Missing or invalid Authorization header");
@@ -74,21 +88,25 @@ public class JWTFilter extends OncePerRequestFilter {
             }
 
 
-            if(jwtUtil.isTokenExpired(token))
-            {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid Token");
-                return;
+
+            Long tenantId = claims.get("tenantid", Long.class);
+            String tenantKey = claims.get("tenantkey", String.class);
+
+            if (tenantId != null && tenantKey != null) {
+                TenantContext.setContext(tenantId, tenantKey);
+                log.info("Thread Context set: TenantID={}, TenantKey={}", tenantId, tenantKey);
             }
+
+
 
             if(username != null && SecurityContextHolder.getContext().getAuthentication() == null )
             {
-                UserDetails userDetails = securityCustomService.loadUserByUsername(username);
+                CustomUserDetails userDetails = securityCustomService.loadUserByUsername(username);
 
                 if(jwtUtil.validateToken(token,userDetails))
                 {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,null,userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    authToken.setDetails(claims);
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }else
                 {
@@ -115,6 +133,10 @@ public class JWTFilter extends OncePerRequestFilter {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             response.setContentType("application/json");
             response.getWriter().write("{\"error\": \"An unexpected error occurred\"}");
+        }finally {
+
+            TenantContext.clear();
+            log.debug("TenantContext cleared for thread: {}", Thread.currentThread().getName());
         }
     }
 

@@ -23,9 +23,6 @@ public class SignUpController {
     @RequestMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody RegisterRequestDto registerRequest)
     {
-
-
-
         try {
 
             if(usersService.findByEmail(registerRequest.getEmail()).isPresent())

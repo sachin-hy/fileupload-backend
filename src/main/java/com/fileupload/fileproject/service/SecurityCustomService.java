@@ -4,6 +4,7 @@ package com.fileupload.fileproject.service;
 
 import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.repository.UserRepository;
+import com.fileupload.fileproject.util.CustomUserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
@@ -25,16 +26,13 @@ public class SecurityCustomService implements UserDetailsService {
     private UserRepository userRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
         Optional<Users> user = userRepo.findByEmail(username);
 
         if(user.isPresent()){
 
-            return  User.builder()
-                    .username(user.get().getEmail())
-                    .password(user.get().getPassword())
-                    .build();
+            return  new CustomUserDetails(user.get());
         }
        else{
 
