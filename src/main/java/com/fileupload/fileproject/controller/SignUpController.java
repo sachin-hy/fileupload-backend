@@ -2,7 +2,7 @@ package com.fileupload.fileproject.controller;
 
 import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.requestDto.RegisterRequestDto;
-import com.fileupload.fileproject.service.UserService;
+import com.fileupload.fileproject.service.UsersService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,7 +18,7 @@ public class SignUpController {
 
 
     @Autowired
-    private UserService usersService;
+    private UsersService usersService;
 
     @RequestMapping("/signup")
     public ResponseEntity<?> signup(@RequestBody RegisterRequestDto registerRequest)

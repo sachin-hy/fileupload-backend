@@ -1,5 +1,6 @@
 package com.fileupload.fileproject.entity;
 
+import com.fileupload.fileproject.entity.base.BaseEntity;
 import com.fileupload.fileproject.entity.base.TenantAwareEntity;
 import com.fileupload.fileproject.enums.UploadStatus;
 import jakarta.persistence.*;
@@ -23,7 +24,12 @@ import java.util.ArrayList;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class FileMetadata {
+public class FileMetadata extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tenant_id", nullable = false, insertable = false, updatable = false)

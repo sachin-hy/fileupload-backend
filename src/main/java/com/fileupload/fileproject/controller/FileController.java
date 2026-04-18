@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fileupload.fileproject.requestDto.FileRequestDto;
 import com.fileupload.fileproject.requestDto.PresignedUrlRequestDto;
+import com.fileupload.fileproject.responseDto.SharedFileDto;
 import com.fileupload.fileproject.service.FileService;
+import com.fileupload.fileproject.service.FileShareService;
 import io.minio.*;
 import io.minio.CreateMultipartUploadResponse;
 import io.minio.GetPresignedObjectUrlArgs;
@@ -45,7 +47,10 @@ public class FileController {
     @Autowired
    private FileService fileService;
 
-    @PostMapping("/uploadId")
+    @Autowired
+    private FileShareService fileShareService;
+
+    @PostMapping("/api/files/initiate")
     public ResponseEntity<?> getUploadId(@RequestBody FileRequestDto fileRequestDto) {
 
 
@@ -59,7 +64,7 @@ public class FileController {
 
     }
 
-    @PostMapping("/presignedurl")
+    @PostMapping("/api/files/presigned-url")
     public ResponseEntity<?> getPresignedUrl(@RequestBody PresignedUrlRequestDto requestDto)
     {
 
@@ -71,7 +76,7 @@ public class FileController {
     }
 
 
-    @PostMapping("/completeUpload")
+    @PostMapping("/api/files/complete")
     public ResponseEntity<?> completeMultipartUpload(@RequestBody List<Map<String,Object>> etags,
                                                      @RequestParam("s3Key") String s3Key,
                                                      @RequestParam("uploadId") String uploadId)
@@ -87,14 +92,31 @@ public class FileController {
     }
 
 
-
-    @GetMapping("/download/{s3Key}")
-    public ResponseEntity<?> downloadFile(@PathVariable("s3Key") String s3Key)
+    @GetMapping("/api/files")
+    public ResponseEntity<?> returnAllFilesByTenantId()
     {
-        System.out.println("S3kay = " + s3Key) ;
-        Map<String,Object> response = fileService.downloadFile(s3Key);
+        List<Map<String,Object>> result = fileService.getTenantFileList();
+
+        return new ResponseEntity<>(result,HttpStatus.OK);
+    }
+
+    @GetMapping("/api/download/{s3Key}")
+    public ResponseEntity<?> downloadFile(@PathVariable("fileId") String fileId)
+    {
+
+
+        Map<String,Object> response = fileService.downloadFile(Long.parseLong(fileId));
 
         return new ResponseEntity<>(response,HttpStatus.OK);
+    }
+
+    @GetMapping("/api/shares/me")
+    public ResponseEntity<?> getFilesSharedWithMe()
+    {
+        List<SharedFileDto> result = fileShareService.getFilesSharedWithMe();
+
+        return new ResponseEntity<>(result,HttpStatus.OK);
+
     }
 
 

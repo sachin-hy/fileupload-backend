@@ -5,7 +5,7 @@ import com.fileupload.fileproject.entity.Tenant;
 import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.enums.UserRole;
 import com.fileupload.fileproject.repository.TenantRepository;
-import com.fileupload.fileproject.repository.UserRepository;
+import com.fileupload.fileproject.repository.UsersRepository;
 import com.fileupload.fileproject.requestDto.TenantRegistrationDto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,7 +23,7 @@ public class TenantService {
 
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
-    private final UserRepository userRepository;
+    private final UsersRepository userRepository;
 
     @Transactional
     public Users register(TenantRegistrationDto dto) {

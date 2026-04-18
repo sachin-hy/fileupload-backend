@@ -16,7 +16,7 @@ import java.util.List;
 @Table(
         name = "tenants",
         indexes ={
-                @Index(name = "idx_tenant_key",columnList = "tenant_key"),
+                @Index(name = "idx_tenant_key",columnList = "tenantKey"),
                 @Index(name = "idx_subdomain", columnList = "subdomain"),
                 @Index(name = "idx_status", columnList = "status")
         }

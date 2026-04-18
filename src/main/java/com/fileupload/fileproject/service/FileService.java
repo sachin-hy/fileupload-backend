@@ -7,15 +7,25 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.*;
 import com.fileupload.fileproject.Exception.FileExpiredException;
 import com.fileupload.fileproject.Exception.FileNotReadyException;
+import com.fileupload.fileproject.context.TenantContext;
+import com.fileupload.fileproject.entity.FileMetadata;
 import com.fileupload.fileproject.entity.Files;
 
+import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.enums.Status;
+import com.fileupload.fileproject.enums.UploadStatus;
+import com.fileupload.fileproject.repository.FileMetadataRepository;
 import com.fileupload.fileproject.repository.FilesRepository;
+import com.fileupload.fileproject.repository.TenantRepository;
+import com.fileupload.fileproject.util.CustomUserDetails;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,8 +35,10 @@ import java.util.*;
 
 @Service
 @Slf4j
+@AllArgsConstructor
 public class FileService {
 
+    private final TenantRepository tenantRepo;
 
     @Autowired
     private AmazonS3 s3Client;
@@ -40,13 +52,20 @@ public class FileService {
     @Value("${spring.frontendUrl}")
     private String frontendUrl;
 
+
+    private final FileMetadataRepository fileMetadataRepo;
+
     @Transactional
     public Map<String,Object> uploadId(String fileName,String fileSize,String fileType)
     {
+        Long tenantId = TenantContext.getTenantId();
+        CustomUserDetails details = (CustomUserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        Users currentUser = details.getUserEntity();
+
         try{
 
             String uniqueId = UUID.randomUUID().toString();
-            String objectName = uniqueId + "_" + fileName;
+            String objectName = TenantContext.getTenantKey() + "/"  + uniqueId + "_" + fileName;
 
             log.info("S3 Client Region: " + s3Client.getRegionName());
             log.info("Attempting to connect to bucket: " + bucketName);
@@ -71,16 +90,32 @@ public class FileService {
             String uploadId = initResponse.getUploadId();
 
             log.info("uploadId is created = " + uploadId);
-            Files file = new Files();
-            file.setFileId(objectName);
-            file.setFileName(fileName);
-            file.setFileSize(fileSize);
-            file.setFileType(fileType);
-            file.setUploaded_at(new Date(System.currentTimeMillis()));
-            file.setDownload_count(0);
-            file.setStatus(Status.PENDING);
 
-            fileRepo.save(file);
+            FileMetadata file = FileMetadata.builder()
+                    .uploadedBy(currentUser)
+                    .storageKey(objectName)
+                    .fileName(fileName)
+                    .originalFileName(fileName)
+                    .fileSize(Long.parseLong(fileSize))
+                    .contentType(fileType)
+                    .bucketName(bucketName)
+                    .uploadStatus(UploadStatus.INITIATED)
+                    .tenant(tenantRepo.findById(tenantId).get())
+                    .downloadCount(0)
+                    .isDeleted(false)
+                    .build();
+
+            fileMetadataRepo.save(file);
+//            Files file = new Files();
+//            file.setFileId(objectName);
+//            file.setFileName(fileName);
+//            file.setFileSize(fileSize);
+//            file.setFileType(fileType);
+//            file.setUploaded_at(new Date(System.currentTimeMillis()));
+//            file.setDownload_count(0);
+//            file.setStatus(Status.PENDING);
+//
+//            fileRepo.save(file);
 
 
             long size = Long.parseLong(fileSize);
@@ -117,6 +152,13 @@ public class FileService {
             log.info("presigneUrl s3key = " + s3Key);
 
 
+            String currentTenantKey = TenantContext.getTenantKey();
+
+            if (!s3Key.startsWith(currentTenantKey + "/")) {
+                log.warn("Security Alert: User from tenant {} tried to access key {}", currentTenantKey, s3Key);
+                throw new RuntimeException("Access Denied");
+            }
+
               try{
                   Date expiration = new Date(System.currentTimeMillis() + 1 * 60 * 60 * 1000); // 1 hour
 
@@ -149,7 +191,17 @@ public class FileService {
           @Transactional
           public Map<String,Object> completeMultipartUpload(List<Map<String,Object>> etags,
                                               String s3Key,
-                                              String uploadId) {
+                                              String uploadId)
+          {
+
+
+              FileMetadata file = fileMetadataRepo.findByStorageKey(s3Key);
+
+
+              if (file == null || !file.getTenant().getTenantid().equals(TenantContext.getTenantId())) {
+                  throw new RuntimeException("Unauthorized: Cannot complete this upload.");
+              }
+
               try {
                   List<PartETag> pTagList = new ArrayList<>();
 
@@ -183,23 +235,30 @@ public class FileService {
 
                   System.out.println("file id  = " + s3Key);
 
-                  Files file = fileRepo.findByFileId(s3Key);
+                  // FileMetadata file = fileMetadataRepo.findByStorageKey(s3Key);
+//                  Files file = fileRepo.findByFileId(s3Key);
 
-                  if(file == null)
-                  {
-                      throw new InternalError("SomeThing went wrong! Please Try After some time");
-                  }
+
 
                   // setFile Status as success
-                  file.setStatus(Status.SUCCESS);
+                  file.setUploadStatus(UploadStatus.COMPLETED);
 
                   //set file expireed time
 
-                  String downloadUrl = frontendUrl + s3Key;
+//                  String downloadUrl = frontendUrl + s3Key;
+//
+//                  Map<String, Object> response = new HashMap<>();
+//                  response.put("s3Key", s3Key);
+//                  response.put("downloadUrl", downloadUrl);
+//
+//                  return response;
 
                   Map<String, Object> response = new HashMap<>();
+                  response.put("fileId", file.getId());
                   response.put("s3Key", s3Key);
-                  response.put("downloadUrl", downloadUrl);
+                  response.put("fileName", file.getOriginalFileName());
+                  response.put("status", "SUCCESS");
+                  response.put("timestamp", LocalDateTime.now());
 
                   return response;
 
@@ -212,21 +271,35 @@ public class FileService {
               }
           }
 
+    @Transactional
+    public List<Map<String, Object>> getTenantFileList(){
 
+        Long tenantId = TenantContext.getTenantId();
 
-
+        return fileMetadataRepo.findByTenant_TenantidAndUploadStatusAndIsDeletedFalse(tenantId, UploadStatus.COMPLETED)
+                .stream().map(file -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", file.getId());
+                    map.put("name", file.getOriginalFileName());
+                    map.put("size", file.getFileSize());
+                    map.put("uploadedBy", file.getUploadedBy().getFullName());
+                    map.put("createdAt", file.getCreatedAt());
+                    return map;
+                }).toList();
+    }
 
      @Transactional
-     public Map<String,Object> downloadFile(String s3Key)
+     public Map<String,Object> downloadFile(Long fileId)
      {
 
          try {
 
-             Files file = fileRepo.findByFileId(s3Key);
+             //Files file = fileRepo.findById(s3Key);
+             FileMetadata file = fileMetadataRepo.findById(fileId).get();
+             String s3Key = file.getStorageKey();
 
-             Status status = file.getStatus();
-             if(status == Status.PENDING)
-             {
+             UploadStatus status = file.getUploadStatus();
+             if (file.getUploadStatus() != UploadStatus.COMPLETED) {
                  throw new FileNotReadyException("File Is Not Ready To Download");
              }
 
@@ -248,14 +321,13 @@ public class FileService {
              response.put("s3Key", s3Key);
              response.put("expiresAt", expiration.toString());
              response.put("fileSize", file.getFileSize());
-             response.put("fileType", file.getFileType());
-             response.put("fileName", file.getFileName());
+             response.put("fileType", file.getContentType());
+             response.put("fileName", file.getOriginalFileName());
 
-
-
-             file.setDownload_count(file.getDownload_count() + 1);
+             file.setDownloadCount(file.getDownloadCount() + 1);
 
              return response;
+
          }catch(Exception e)
          {
              log.error("Error {}",e);

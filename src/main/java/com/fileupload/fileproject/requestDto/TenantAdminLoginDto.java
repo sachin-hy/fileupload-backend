@@ -11,6 +11,6 @@ public class TenantAdminLoginDto {
     private String email;
 
     private String password;
-    private String subdomain;
+
 
 }

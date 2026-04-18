@@ -32,6 +32,10 @@ import java.util.List;
 @Builder
 public class Users extends BaseEntity {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "tenant_id",nullable = false)
     private Tenant tenant;
@@ -80,11 +84,11 @@ public class Users extends BaseEntity {
     @JoinColumn(name = "invited_by")
     private Users invitedBy;
 
-    @Column(name = "invitation_token")
-    private String invitationToken;
+//    @Column(name = "invitation_token")
+//    private String invitationToken;
 
-    @Column(name = "invitation_expires_at")
-    private LocalDateTime invitationExpiresAt;
+//    @Column(name = "invitation_expires_at")
+//    private LocalDateTime invitationExpiresAt;
 
     @OneToMany(mappedBy = "uploadedBy", cascade = CascadeType.ALL)
     @Builder.Default

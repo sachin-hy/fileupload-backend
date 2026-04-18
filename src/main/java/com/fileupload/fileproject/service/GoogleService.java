@@ -3,8 +3,7 @@ package com.fileupload.fileproject.service;
 
 import com.fileupload.fileproject.Exception.InternalError;
 import com.fileupload.fileproject.entity.Users;
-import com.fileupload.fileproject.repository.UserRepository;
-import com.fileupload.fileproject.responseDto.LoginResponseDto;
+import com.fileupload.fileproject.repository.UsersRepository;
 import com.fileupload.fileproject.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,7 @@ public class GoogleService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private UserRepository userRepository;
+    private UsersRepository userRepository;
 
     @Autowired
     private SecurityCustomService securityCustomService;
