@@ -2,82 +2,118 @@ package com.fileupload.fileproject.controller;
 
 
 import com.fileupload.fileproject.entity.Users;
-import com.fileupload.fileproject.requestDto.LoginRequestDto;
+import com.fileupload.fileproject.enums.AuditAction;
+import com.fileupload.fileproject.repository.TenantRepository;
+import com.fileupload.fileproject.requestDto.TenantAdminLoginDto;
 import com.fileupload.fileproject.responseDto.LoginResponseDto;
+import com.fileupload.fileproject.responseDto.TenantSummaryDto;
+import com.fileupload.fileproject.responseDto.UserSummaryDto;
+import com.fileupload.fileproject.service.AuditLogService;
 import com.fileupload.fileproject.service.SecurityCustomService;
-import com.fileupload.fileproject.service.UserService;
+import com.fileupload.fileproject.util.CustomUserDetails;
 import com.fileupload.fileproject.util.JwtUtil;
-import com.google.common.net.HttpHeaders;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpCookie;
+import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
-
-@Slf4j
 @RestController
+@RequestMapping("/api/public")
+@AllArgsConstructor
 public class LoginController {
 
-    @Autowired
-    private AuthenticationManager authManager;
-    @Autowired
-    private SecurityCustomService securityCustomService;
-    @Autowired
-    private JwtUtil jwtUtil;
-    @Autowired
-    private UserService userService;
 
-    @RequestMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequestDto loginRequest, HttpServletRequest request, HttpServletResponse response)
+    private final AuthenticationManager authManager;
+
+    private final SecurityCustomService securityCustomService;
+
+    private final TenantRepository  tenantRepository;
+
+    private final JwtUtil jwtUtil;
+    private final AuditLogService auditLogService;
+
+
+
+    private String getClientIp(HttpServletRequest request)
     {
 
-        String email	 = loginRequest.getEmail();
-        String password = loginRequest.getPassword();
+        String xfheader = request.getHeader("X-Forwarded-For");
 
-        try {
-
-
-            Authentication auth = authManager.authenticate(new UsernamePasswordAuthenticationToken(email,password));
-
-            String jwt = "";
-
-
-            UserDetails userDetails = securityCustomService.loadUserByUsername(email);
-
-            jwt = jwtUtil.generateToken(userDetails.getUsername());
-            UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,null,userDetails.getAuthorities());
-            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authToken);
-
-
-            Map<String,Object> map = new HashMap<>();
-            map.put("token",jwt);
-
-            log.info("login controller = {}", jwt);
-            return new ResponseEntity<>(map, HttpStatus.OK);
-
-        }catch(Exception e)
+        if(xfheader == null)
         {
-            return new ResponseEntity<>("Invalid email or password", HttpStatus.UNAUTHORIZED);
+            return request.getRemoteAddr();
         }
 
+        return xfheader.split(",")[0];
     }
 
+
+    @PostMapping("/login")
+    public ResponseEntity<?> loginMethod(@RequestBody TenantAdminLoginDto dto,
+                                              HttpServletRequest request)
+    {
+          String email = dto.getEmail();
+          String password = dto.getPassword();
+          String ip = getClientIp(request);
+
+          try{
+
+              Authentication auth = authManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
+
+              String jwt = "";
+
+              CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+              Users user = userDetails.getUserEntity();
+
+              jwt = jwtUtil.generateToken(
+                      user.getEmail(),
+                      user.getTenant().getTenantKey(),
+                      user.getTenant().getSubdomain(),
+                      user.getRole().name(),
+                      user.getTenant().getTenantid()
+              );
+
+
+              auditLogService.log(user.getTenant().getTenantid(), email, AuditAction.USER_LOGIN_SUCCESS, ip, "Successful login", null);
+
+
+              UserSummaryDto userDto = new UserSummaryDto(
+                      user.getId(),
+                      user.getEmail(),
+                      user.getFirstName(),
+                      user.getLastName(),
+                      user.getRole().name()
+              );
+
+              TenantSummaryDto tenantDto = new TenantSummaryDto(
+                      user.getTenant().getTenantid(),
+                      user.getTenant().getOrganisationName(),
+                      user.getTenant().getSubdomain(),
+                      user.getTenant().getSubscriptionEndsAt(),
+                      user.getTenant().getPlanType()
+              );
+
+              LoginResponseDto response =
+                      new LoginResponseDto(jwt, userDto, tenantDto);
+
+              return new ResponseEntity<>(response, HttpStatus.OK);
+
+
+          }catch(Exception e)
+          {
+              auditLogService.log(null, null, AuditAction.USER_LOGIN_FAILED, ip, null, "Login failed for: " + email);
+              return new ResponseEntity<>("Invalid email or password", HttpStatus.UNAUTHORIZED);
+          }
+    }
 }

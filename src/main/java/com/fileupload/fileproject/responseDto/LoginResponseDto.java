@@ -1,15 +1,11 @@
 package com.fileupload.fileproject.responseDto;
 
 
-import lombok.*;
 
-@Setter
-@Getter
-@AllArgsConstructor
-@NoArgsConstructor
-@Data
-public class LoginResponseDto {
 
-    private String token;
-    private String username;
-}
+
+public record LoginResponseDto(
+        String accessToken,
+        UserSummaryDto user,
+        TenantSummaryDto tenant
+) {}

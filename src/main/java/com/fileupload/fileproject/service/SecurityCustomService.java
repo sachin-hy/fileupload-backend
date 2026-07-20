@@ -2,15 +2,16 @@ package com.fileupload.fileproject.service;
 
 
 
+import com.fileupload.fileproject.context.TenantContext;
 import com.fileupload.fileproject.entity.Users;
-import com.fileupload.fileproject.repository.UserRepository;
+import com.fileupload.fileproject.repository.UsersRepository;
+import com.fileupload.fileproject.util.CustomUserDetails;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -22,19 +23,17 @@ public class SecurityCustomService implements UserDetailsService {
 
 
     @Autowired
-    private UserRepository userRepo;
+    private UsersRepository userRepo;
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    @Transactional
+    public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        Optional<Users> user = userRepo.findByEmail(username);
+        Optional<Users> user = userRepo.findByEmailWithTenantDetails(username);
 
         if(user.isPresent()){
 
-            return  User.builder()
-                    .username(user.get().getEmail())
-                    .password(user.get().getPassword())
-                    .build();
+            return  new CustomUserDetails(user.get());
         }
        else{
 

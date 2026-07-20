@@ -3,11 +3,10 @@ package com.fileupload.fileproject.requestDto;
 
 import lombok.*;
 
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Setter
 @Getter
-@Data
 public class PresignedUrlRequestDto {
 
    private String partNumber;

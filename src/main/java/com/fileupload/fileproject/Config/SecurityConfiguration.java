@@ -33,33 +33,27 @@ public class SecurityConfiguration {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
+                http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/uploadId",
-                                "/presignedurl",
-                                "/completeUpload"
-                        ).authenticated()
-                        .requestMatchers(
-                                "/login",
-                                "/signup",
+                        .requestMatchers("/api/private/**").authenticated()
+                        .requestMatchers("/api/public/**",
                                 "/oauth2/authorization/google",
-                                "/oauth2/callback/google",
-                                "/error",
-                                "/download"
+                                "/oauth2/callback/google"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/oauth2/authorization/google")
-                        );
+                );
 
         return http.build();
     }
+
+
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
@@ -73,15 +67,19 @@ public class SecurityConfiguration {
         return authenticationManagerBuilder.build();
     }
 
+
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000","https://fileupload-frontend.vercel.app"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173","https://fileupload-frontend.vercel.app"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Set-Cookie", "Authorization"));

@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  app:
+    image: fileupload-backend
+    container_name: fileupload-backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mydatabase
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: MyPass123
+
+      AWS_S3_BUCKET_NAME: networksecuritynb
+      AWS_S3_REGION: us-east-1
+      AWS_S3_ENDPOINT: http://minio:9000
+      AWS_S3_ACCESS_KEY: admin
+      AWS_S3_SECRET_KEY: admin123
+    ports:
+      - "8081:8081"
+
+
+
+
+
+  mysql:
+    image: mysql:8.0
+    container_name: fileupload-backend-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: MyPass123
+      MYSQL_DATABASE: mydatabase
+      MYSQL_USER: myuser
+      MYSQL_PASSWORD: MyPass123
+    volumes:
+      - fileupload-backend-mysql-volume:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+
+
+  minio:
+    image: minio/minio:latest
+    container_name: fileupload-backend-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+    volumes:
+      - fileupload-backend-minio-volume:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  fileupload-backend-mysql-volume:
+  fileupload-backend-minio-volume:

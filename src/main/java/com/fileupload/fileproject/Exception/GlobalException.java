@@ -29,6 +29,19 @@ public class GlobalException {
          return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<?> handleIllegalArgumentException(Exception ex)
+    {
+        log.error("Exception  = {}" , ex.getMessage() );
+
+        Map<String, Object> error = new HashMap<>();
+
+        error.put("message", ex.getMessage() );
+
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+
+    }
+
     @ExceptionHandler(FileNotReadyException.class)
     public ResponseEntity<?> handleFileNotReadyException(Exception ex)
     {
@@ -51,6 +64,16 @@ public class GlobalException {
 
         error.put("message", ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(SubscriptionExpiredException.class)
+    public ResponseEntity<Map<String, Object>> handleSubscriptionExpired(SubscriptionExpiredException ex) {
+        Map<String, Object> errorMap = new HashMap<>();
+        errorMap.put("status", "LOCKED");
+        errorMap.put("message", ex.getMessage());
+        errorMap.put("code", 402);
+
+        return new ResponseEntity<>(errorMap, HttpStatus.PAYMENT_REQUIRED);
     }
 
 

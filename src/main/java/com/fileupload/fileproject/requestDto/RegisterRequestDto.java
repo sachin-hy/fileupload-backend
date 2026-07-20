@@ -4,11 +4,10 @@ package com.fileupload.fileproject.requestDto;
 import lombok.*;
 import org.hibernate.annotations.SecondaryRow;
 
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 @Setter
 @Getter
-@Data
 public class RegisterRequestDto {
 
 
