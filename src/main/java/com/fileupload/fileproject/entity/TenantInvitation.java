@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tenant_invitations",
         indexes= {
-                @Index(name  = "idx_token",columnList = "token"),
-                @Index(name = "idx_invite_email", columnList = "email")
+                @Index(name  = "idx_tenantInvitation_token",columnList = "token"),
+                @Index(name = "idx_tenantInvitation_invite_email", columnList = "email")
         })
 @Getter
 @Setter

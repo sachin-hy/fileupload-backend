@@ -15,10 +15,10 @@ import java.util.List;
 @Table(
         name = "users",
         indexes = {
-                @Index(name = "idx_tenant_id", columnList = "tenant_id"),
-                @Index(name = "idx_email", columnList = "email"),
-                @Index(name = "idx_status" , columnList = "status"),
-                @Index(name = "idx_role", columnList = "role")
+                @Index(name = "idx_user_tenant_id", columnList = "tenant_id"),
+                @Index(name = "idx_user_email", columnList = "email"),
+                @Index(name = "idx_user_status" , columnList = "status"),
+                @Index(name = "idx_user_role", columnList = "role")
         },
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_tenant_email", columnNames = {"tenant_id", "email"})

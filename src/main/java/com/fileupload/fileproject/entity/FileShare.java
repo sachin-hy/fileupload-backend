@@ -21,8 +21,8 @@ import java.time.LocalDateTime;
         },
         indexes = {
 
-        @Index(name = "idx_share_tenant", columnList = "tenant_id"),
-        @Index(name = "idx_share_status", columnList = "status")
+        @Index(name = "idx_fileshare_tenantid", columnList = "tenant_id"),
+        @Index(name = "idx_fileshare_status", columnList = "status")
 })
 public class FileShare extends BaseEntity {
 
