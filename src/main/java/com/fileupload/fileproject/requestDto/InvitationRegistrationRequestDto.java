@@ -13,4 +13,5 @@ public class InvitationRegistrationRequestDto {
     String firstName;
     String lastName;
     String password;
+    String email;
 }

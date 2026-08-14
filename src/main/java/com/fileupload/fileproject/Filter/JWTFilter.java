@@ -1,6 +1,9 @@
 package com.fileupload.fileproject.Filter;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fileupload.fileproject.context.LookupContext;
 import com.fileupload.fileproject.context.TenantContext;
+import com.fileupload.fileproject.requestDto.TenantAdminLoginDto;
 import com.fileupload.fileproject.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -21,8 +24,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
-
-
+import java.util.stream.Collectors;
 
 
 @Component
@@ -45,6 +47,17 @@ public class JWTFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String path = request.getServletPath();
+
+        if (pathMatcher.match("/api/public/login", path)
+                || pathMatcher.match("/api/public/invitation/register/*", path)) {
+
+            String subdomain = request.getParameter("subdomain");
+
+            LookupContext.setContext(subdomain);
+
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         // skip public apis
         if (pathMatcher.match("/api/public/**", path)) {
@@ -124,6 +137,8 @@ public class JWTFilter extends OncePerRequestFilter {
         } finally {
             // at end make sure to clear the tenantcontext
             TenantContext.clear();
+            LookupContext.clear();
+
             log.debug("TenantContext cleared");
         }
     }

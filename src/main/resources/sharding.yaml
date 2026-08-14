@@ -1,0 +1,85 @@
+dataSources:
+  shard_0:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://localhost:3307/shard0_db?allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: root
+
+  shard_1:
+    dataSourceClassName: com.zaxxer.hikari.HikariDataSource
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://localhost:3308/shard1_db?allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: root
+
+rules:
+  - !SHARDING
+    tables:
+
+      tenants:
+        actualDataNodes: shard_$->{0..1}.tenants
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+      users:
+        actualDataNodes: shard_$->{0..1}.users
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+      file_metadata:
+        actualDataNodes: shard_$->{0..1}.file_metadata
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+      file_shares:
+        actualDataNodes: shard_$->{0..1}.file_shares
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+      tenant_usage:
+        actualDataNodes: shard_$->{0..1}.tenant_usage
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+      tenant_invitations:
+        actualDataNodes: shard_$->{0..1}.tenant_invitations
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+      audit_log:
+        actualDataNodes: shard_$->{0..1}.audit_log
+        databaseStrategy:
+          standard:
+            shardingColumn: tenant_id
+            shardingAlgorithmName: tenant-inline
+
+    bindingTables:
+      - tenants,users,file_metadata,file_shares,tenant_usage,tenant_invitations,audit_log
+
+
+    shardingAlgorithms:
+      tenant-inline:
+        type: INLINE
+        props:
+          algorithm-expression: shard_$->{tenant_id % 2}
+
+  - !BROADCAST
+    tables:
+      - tenant_lookup         # this table will be created/replicated on BOTH ds_0 and ds_1
+
+
+props:
+  sql-show: true

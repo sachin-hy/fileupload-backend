@@ -1,14 +1,84 @@
 version: "3.8"
 
 services:
-  app:
+
+  mysql-shard0:
+    image: mysql:8.0.46
+    container_name: mysql-shard0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: shard0_db
+    volumes:
+      - shard0-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 280s
+
+
+  mysql-shard1:
+    image: mysql:8.0.46
+    container_name: mysql-shard1
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: shard1_db
+    volumes:
+      - shard1-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 280s
+
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+        - "6379:6379"
+    command: redis-server --appendonly yes
+    restart: always
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+
+
+  froentend:
+    image: sachhin961/fileupload-froentend:3.0
+    container_name: fileupload-froentend
+
+    ports:
+      - "3000:5173"
+    command: sh -c "VITE_API_BASE_URL=http://localhost:8081 npm run dev -- --host"
+
+
+
+
+  backend:
     image: fileupload-backend
     container_name: fileupload-backend
+    depends_on:
+      mysql-shard0:
+        condition: service_healthy
+      mysql-shard1:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
-      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      SPRING_DATASOUCE_DIVER_CLASS_NAME: ${SPRING_DATASOUCE_DIVER_CLASS_NAME}
+
       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT}
 
       AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME}
@@ -19,12 +89,22 @@ services:
       SPRING_TOKENENDPOINT: ${SPRING_TOKENENDPOINT}
       SPRING_USERINFOENDPOINT: ${SPRING_USERINFOENDPOINT}
       SPRING_FROENTENDURL: ${SPRING_FROENTENDURL}
-
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
 
       CLIENT_ID: ${CLIENT_ID}
       CLIENT_SECRET: ${CLIENT_SECRET}
       GOOGLE_REDIRECT_URL: ${GOOGLE_REDIRECT_URL}
 
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      SPRINGBOOT_REDIS_HOST: ${SPRINGBOOT_REDIS_HOST}
+      SPRINGBOOT_REDIS_PORT: ${SPRINGBOOT_REDIS_PORT}
+      SPRINGBOOT_REDIS_TIMEOUT: ${SPRINGBOOT_REDIS_TIMEOUT}
+
+
     ports:
       - "8081:8081"
 
+volumes:
+  shard0-data:
+  shard1-data:
+  redis_data:

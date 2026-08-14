@@ -16,5 +16,4 @@ public class TenantAdminLoginDto {
 
     private String password;
 
-
 }

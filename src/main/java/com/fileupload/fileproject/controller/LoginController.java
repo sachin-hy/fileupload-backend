@@ -1,8 +1,10 @@
 package com.fileupload.fileproject.controller;
 
 
+import com.fileupload.fileproject.context.LookupContext;
 import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.enums.AuditAction;
+import com.fileupload.fileproject.repository.TenantLookupRepository;
 import com.fileupload.fileproject.repository.TenantRepository;
 import com.fileupload.fileproject.requestDto.TenantAdminLoginDto;
 import com.fileupload.fileproject.responseDto.LoginResponseDto;
@@ -41,6 +43,7 @@ public class LoginController {
 
     private final JwtUtil jwtUtil;
     private final AuditLogService auditLogService;
+    private final TenantLookupRepository tenantLookupRepository;
 
 
 
@@ -64,6 +67,12 @@ public class LoginController {
     {
           String email = dto.getEmail();
           String password = dto.getPassword();
+
+          String subdomain = LookupContext.getSubdomain();
+
+          Long tenantId = tenantLookupRepository.findByEmailAndSubdomain(email,subdomain).getTenantId();
+
+
           String ip = getClientIp(request);
 
           try{
@@ -112,7 +121,8 @@ public class LoginController {
 
           }catch(Exception e)
           {
-              auditLogService.log(null, null, AuditAction.USER_LOGIN_FAILED, ip, null, "Login failed for: " + email);
+              System.out.println(e);
+              auditLogService.log(tenantId, null, AuditAction.USER_LOGIN_FAILED, ip, null, "Login failed for: " + email);
               return new ResponseEntity<>("Invalid email or password", HttpStatus.UNAUTHORIZED);
           }
     }

@@ -2,16 +2,20 @@ package com.fileupload.fileproject.service;
 
 
 import com.fileupload.fileproject.Exception.ResourceConflictException;
+import com.fileupload.fileproject.context.LookupContext;
 import com.fileupload.fileproject.context.TenantContext;
 import com.fileupload.fileproject.entity.Tenant;
 import com.fileupload.fileproject.entity.TenantInvitation;
+import com.fileupload.fileproject.entity.TenantLookup;
 import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.enums.AuditAction;
 import com.fileupload.fileproject.enums.UserRole;
 import com.fileupload.fileproject.enums.UserStatus;
 import com.fileupload.fileproject.repository.TenantInvitationRepository;
+import com.fileupload.fileproject.repository.TenantLookupRepository;
 import com.fileupload.fileproject.repository.TenantRepository;
 import com.fileupload.fileproject.repository.UsersRepository;
+import com.fileupload.fileproject.requestDto.InvitationRegistrationRequestDto;
 import com.fileupload.fileproject.util.CustomUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +38,7 @@ public class InvitationService {
     private final TenantInvitationRepository   tenantInvitationRepository;
     private final UsersRepository usersRepository;
     private final AuditLogService auditLogService;
+    private final TenantLookupRepository tenantLookupRepository;
 
 
     @Transactional
@@ -79,9 +84,16 @@ public class InvitationService {
                 invitation.setInvitedBy(adminEntity);
                 tenantInvitationRepository.save(invitation);
 
+                TenantLookup tenantLookup = new TenantLookup();
+                tenantLookup.setEmail(email);
+                tenantLookup.setTenantId(tenant.getTenantid());
+                tenantLookup.setSubdomain(tenant.getSubdomain());
+
+                tenantLookupRepository.save(tenantLookup);
+
                 String inviteUrl = "https://" + tenant.getSubdomain() + "/register?token=" + token;
 
-                emailService.sendInvite(email, inviteUrl, tenant.getOrganisationName());
+                emailService.sendInvite(email, inviteUrl, tenant.getOrganisationName(),tenant.getSubdomain());
 
                }
 
@@ -98,9 +110,16 @@ public class InvitationService {
 
 
     @Transactional
-    public String completeRegistration(String token, String firstName, String lastName, String password,String ip)
+    public String completeRegistration(String token, InvitationRegistrationRequestDto dto, String ip)
     {
-        TenantInvitation invite = tenantInvitationRepository.findByToken(token)
+
+        String subdomain = LookupContext.getSubdomain();
+
+        TenantLookup tenantLookup = tenantLookupRepository.findByEmailAndSubdomain(dto.getEmail(), subdomain);
+
+        Long tenantId = tenantLookup.getTenantId();
+
+        TenantInvitation invite = tenantInvitationRepository.findByTokenAndTenantId(token,tenantId)
                 .orElseThrow(() -> new RuntimeException("Invalid or expired invitation link."));
 
         if (invite.isExpired()) {
@@ -113,7 +132,6 @@ public class InvitationService {
             throw new RuntimeException("Email is already registered.");
         }
 
-        Long tenantId = invite.getTenant().getTenantid();
 
         Tenant tenant = tenantRepository.findAndLockByTenantid(tenantId);//.orElseThrow(() -> new RuntimeException("Tenant not found."));
 
@@ -128,10 +146,10 @@ public class InvitationService {
 
         Users newUser = Users.builder()
                 .tenant(tenant)
-                .firstName(firstName)
-                .lastName(lastName)
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
                 .email(invite.getEmail())
-                .passwordHash(passwordEncoder.encode(password))
+                .passwordHash(passwordEncoder.encode(dto.getPassword()))
                 .role(invite.getRole())
                 .status(UserStatus.ACTIVE)
                 .invitedBy(invite.getInvitedBy())

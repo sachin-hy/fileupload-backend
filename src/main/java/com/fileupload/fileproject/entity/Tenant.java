@@ -29,7 +29,7 @@ import java.util.List;
 public class Tenant extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "tenant_id")
     private Long tenantid;
 
 

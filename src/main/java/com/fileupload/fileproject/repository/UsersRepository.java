@@ -31,8 +31,8 @@ public interface UsersRepository extends JpaRepository<Users,Long> {
     Optional<Users> findByEmailAndTenant_Tenantid(String currentUserEmail, Long currentTenantId);
 
 
-    @Query("SELECT u FROM Users u JOIN FETCH u.tenant WHERE u.email = :email")
-    Optional<Users> findByEmailWithTenantDetails(@Param("email") String email);
+    @Query("SELECT u FROM Users u JOIN FETCH u.tenant WHERE u.email = :email And u.tenant.tenantid = :tenantId")
+    Optional<Users> findByEmailWithTenantDetails(@Param("email") String email,@Param("tenantId") Long tenantId);
 
     List<Users> findAllByTenant_Tenantid(Long currentTenantId);
 

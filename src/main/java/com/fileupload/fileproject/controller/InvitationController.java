@@ -71,9 +71,7 @@ public class InvitationController {
         String ip = getClientIp(request);
 
         String organisationName = invitationService.completeRegistration(token,
-                                               dto.getFirstName(),
-                                               dto.getLastName(),
-                                               dto.getPassword(),
+                                              dto,
                                                ip);
 
 

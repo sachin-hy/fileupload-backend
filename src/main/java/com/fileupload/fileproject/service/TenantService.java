@@ -2,24 +2,22 @@ package com.fileupload.fileproject.service;
 
 
 import com.fileupload.fileproject.entity.Tenant;
+import com.fileupload.fileproject.entity.TenantLookup;
 import com.fileupload.fileproject.entity.TenantUsage;
 import com.fileupload.fileproject.entity.Users;
 import com.fileupload.fileproject.enums.AuditAction;
 import com.fileupload.fileproject.enums.PlanType;
 import com.fileupload.fileproject.enums.UserRole;
 import com.fileupload.fileproject.enums.UserStatus;
-import com.fileupload.fileproject.repository.FileShareRepository;
-import com.fileupload.fileproject.repository.TenantRepository;
-import com.fileupload.fileproject.repository.TenantUsageRepository;
-import com.fileupload.fileproject.repository.UsersRepository;
+import com.fileupload.fileproject.repository.*;
 import com.fileupload.fileproject.requestDto.TenantRegistrationDto;
 import com.fileupload.fileproject.responseDto.UserDto;
 import lombok.AllArgsConstructor;
-import lombok.Data;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.util.HashMap;
 import java.util.List;
@@ -37,13 +35,32 @@ public class TenantService {
     private final AuditLogService auditLogService;
     private final FileShareRepository fileShareRepository;
 
+    private final StringRedisTemplate  redisTemplate;
+    private final TenantLookupRepository tenantLookupRepository;
 
     @Transactional
     public Users register(TenantRegistrationDto dto, String ip) {
         try {
 
+            //Long tenantId = tenantIdGenerator.generateTenantId();
+            Long tenantId = redisTemplate.opsForValue().increment("global:tenant:id");
+            System.out.println("tenant id = " + tenantId);
+
+
+
+            TenantLookup tenantLookup = new TenantLookup();
+            tenantLookup.setTenantId(tenantId);
+            tenantLookup.setEmail(dto.getAdminEmail());
+            tenantLookup.setSubdomain(dto.getSubdomain());
+
+            tenantLookupRepository.save(tenantLookup);
+
+
+            String tenantKey = "TENANT_KEY_" + UUID.randomUUID().toString();
+
             Tenant tenant = Tenant.builder()
-                    .tenantKey("TENANT_KEY_" + UUID.randomUUID().toString())
+                    .tenantid(tenantId)
+                    .tenantKey(tenantKey)
                     .subdomain(dto.getSubdomain())
                     .organisationName(dto.getOrganisationName())
                     .description(dto.getDescription())
@@ -84,7 +101,7 @@ public class TenantService {
             return tenantAdmin;
         }catch (Exception e) {
 
-            auditLogService.log(null, null, AuditAction.TENANT_REGISTRATION_FAILED, ip, null, e.getMessage());
+            auditLogService.log(1l, dto.getAdminEmail(), AuditAction.TENANT_REGISTRATION_FAILED, ip, null, e.getMessage());
             throw e;
         }
     }

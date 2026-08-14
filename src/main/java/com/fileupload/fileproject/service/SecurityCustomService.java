@@ -2,8 +2,11 @@ package com.fileupload.fileproject.service;
 
 
 
+import com.fileupload.fileproject.context.LookupContext;
 import com.fileupload.fileproject.context.TenantContext;
+import com.fileupload.fileproject.entity.TenantLookup;
 import com.fileupload.fileproject.entity.Users;
+import com.fileupload.fileproject.repository.TenantLookupRepository;
 import com.fileupload.fileproject.repository.UsersRepository;
 import com.fileupload.fileproject.util.CustomUserDetails;
 import lombok.extern.slf4j.Slf4j;
@@ -24,20 +27,31 @@ public class SecurityCustomService implements UserDetailsService {
 
     @Autowired
     private UsersRepository userRepo;
+    @Autowired
+    private TenantLookupRepository tenantLookupRepository;
 
     @Override
     @Transactional
     public CustomUserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        Optional<Users> user = userRepo.findByEmailWithTenantDetails(username);
+           String subdomain = LookupContext.getSubdomain();
 
-        if(user.isPresent()){
+           TenantLookup tenantLookup =  tenantLookupRepository.findByEmailAndSubdomain(username,subdomain);
+
+          if(tenantLookup == null){
+              throw new UsernameNotFoundException("Invalid email or subdomain in tenant_lookup");
+          }
+          Long tenantId = tenantLookup.getTenantId();
+
+         Optional<Users> user = userRepo.findByEmailWithTenantDetails(username,tenantId);
+
+         if(user.isPresent()){
 
             return  new CustomUserDetails(user.get());
-        }
-       else{
+         }
+         else{
 
-            throw new UsernameNotFoundException("Enter a Valid Email id");
-        }
+            throw new UsernameNotFoundException("Enter a Valid Email id or subdomain");
+         }
     }
 }
