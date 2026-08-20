@@ -1,6 +1,7 @@
 package com.fileupload.fileproject.Config;
 
 import com.fileupload.fileproject.Filter.JWTFilter;
+import com.fileupload.fileproject.Filter.RateLimitFilter;
 import com.fileupload.fileproject.service.SecurityCustomService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +33,9 @@ public class SecurityConfiguration {
     @Autowired
     private JWTFilter jwtFilter;
 
+    @Autowired
+    private RateLimitFilter rateLimitFilter;
+
     @Value("${app.cors.allowed-origins}")
     private List<String> allowedOrigins;
 
@@ -50,6 +54,7 @@ public class SecurityConfiguration {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter,JWTFilter.class)
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/oauth2/authorization/google")
                 );

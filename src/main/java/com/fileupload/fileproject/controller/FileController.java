@@ -158,6 +158,7 @@ public class FileController {
 
     }
 
+    /* get info of all the files in organisation*/
     @GetMapping("/share")
     @PreAuthorize("hasAnyRole('ADMIN', 'TENANT_ADMIN')")
     public ResponseEntity<?> getFileShare()

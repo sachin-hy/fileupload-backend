@@ -5,7 +5,7 @@ target/
 !**/src/test/**/target/
 
 **/src/main/resources/localrun.properties
-env
+.env
 .env.*
 !.env.example
 

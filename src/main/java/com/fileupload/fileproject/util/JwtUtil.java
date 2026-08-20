@@ -38,6 +38,7 @@ public class JwtUtil {
     }
 
     public String generateToken(
+            Long userid,
             String email,
             String tenantKey,
             String subdomain,
@@ -45,6 +46,7 @@ public class JwtUtil {
             Long tenantId) {
 
         Map<String, Object> claims = new HashMap<>();
+        claims.put("userid", userid);
         claims.put("tenantid", tenantId);
         claims.put("tenantkey", tenantKey);
         claims.put("subdomain", subdomain);

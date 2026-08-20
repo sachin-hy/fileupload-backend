@@ -86,6 +86,7 @@ public class LoginController {
               Users user = userDetails.getUserEntity();
 
               jwt = jwtUtil.generateToken(
+                      user.getId(),
                       user.getEmail(),
                       user.getTenant().getTenantKey(),
                       user.getTenant().getSubdomain(),

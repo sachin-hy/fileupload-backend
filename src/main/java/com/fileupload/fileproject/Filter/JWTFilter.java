@@ -3,7 +3,8 @@ package com.fileupload.fileproject.Filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fileupload.fileproject.context.LookupContext;
 import com.fileupload.fileproject.context.TenantContext;
-import com.fileupload.fileproject.requestDto.TenantAdminLoginDto;
+
+import com.fileupload.fileproject.context.UserIDContext;
 import com.fileupload.fileproject.util.JwtUtil;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -91,6 +92,10 @@ public class JWTFilter extends OncePerRequestFilter {
             //get username which is = to email
             String username = claims.getSubject();
 
+            Long userId = claims.get("userId", Long.class);
+            UserIDContext.setContext(userId);
+
+
             // extract tenant info
             Long tenantId = claims.get("tenantid", Long.class);
             String tenantKey = claims.get("tenantkey", String.class);
@@ -138,6 +143,7 @@ public class JWTFilter extends OncePerRequestFilter {
             // at end make sure to clear the tenantcontext
             TenantContext.clear();
             LookupContext.clear();
+            UserIDContext.clear();
 
             log.debug("TenantContext cleared");
         }
